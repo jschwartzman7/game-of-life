@@ -1,2 +1,3 @@
-# Jonah-Projects
-These are some personal projects and ideas I have created using Java.
+# game-of-life
+
+Conway's Game of Life using Java StdDraw api
