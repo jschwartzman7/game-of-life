@@ -1,32 +1,48 @@
 import java.awt.Color;
+import java.awt.Event;
+import java.awt.RenderingHints.Key;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Scanner;
+
+import org.apache.commons.lang3.StringUtils;
+
 import edu.princeton.cs.introcs.StdDraw;
 
 public class GameOfLife {
+/*
+ * User configurability should be available by default, 
+ * and it should add the input cells to the board without running the game
+ * 
+ * 
+ */
 
-	static final double DEFAULT_SCALE = 5;
-	static final int SPACEBAR_CODE = 32;
-	static final double SCALE_SENSITIVITY = .1;
-	static final double MOVE_SENSITIVITY = .2;
-	static final double CELL_RADIUS = 0.49;
-	static double xScale = DEFAULT_SCALE;
-	static double yScale = DEFAULT_SCALE;
-	static double[] boardCenter = new double[]{0,0};
-	static HashMap<String, Boolean> aliveMap = new HashMap<String, Boolean>(); // i + "" + j
-	static int iteration = 0;
+	final double DEFAULT_SCALE = 5;
+	final int SPACEBAR_CODE = 32;
+	final double SCALE_SENSITIVITY = 1.1;
+	final double MOVE_SENSITIVITY = .4;
+	final double CELL_RADIUS = 0.49;
+	double xScale = DEFAULT_SCALE;
+	double yScale = DEFAULT_SCALE;
+	Color backgroundColor = new Color(0, 0, 0);
+	Color aliveCellColor = new Color(0, 255, 0);
+	Color deadCellColor = new Color(0, 0, 175);
+	double[] boardCenter = new double[]{0,0};
+	HashMap<String, Boolean> aliveCells = new HashMap<String, Boolean>(); // i + "" + j
+	int iterationNum = 0;
+	boolean mouseDown = false;
+	boolean spacebarDown = false;
+	boolean gameHalted = false;
+	LinkedList<String> userConfiguration = new LinkedList<String>();
+    Scanner scanner = new Scanner(System.in);
 
+	public GameOfLife() {
+		StdDraw.enableDoubleBuffering();
+	}
 
-	/*public static int scale = 5;
-	public static double[] center = new double[] {0, 0};
-	public static double updateXMin = -scale + .5;
-	public static double updateXMax = scale;
-	public static double updateYMin = -scale + .5;
-	public static double updateYMax = scale;*/
-	
-
-	public static void resetView() {
+	public void resetView() {
 		boardCenter[0] = 0;
 		boardCenter[1] = 0;
 		xScale = DEFAULT_SCALE;
@@ -35,15 +51,15 @@ public class GameOfLife {
 		StdDraw.setYscale(boardCenter[1] - yScale, boardCenter[1] + yScale);
 	}
 
-	public static double[] parseKey(String key){
+	public double[] parseCellKey(String key){
 		String[] cord = key.split(",");
 		return new double[]{Double.valueOf(cord[0]), Double.valueOf(cord[1])};
 	}
 
-	public static boolean updateCells() {
-		HashSet<String> checkSet = new HashSet<String>(aliveMap.keySet());
-		for(String position : aliveMap.keySet()){
-			double[] cord = parseKey(position);
+	public boolean updateCells() {
+		HashSet<String> checkSet = new HashSet<String>(aliveCells.keySet());
+		for(String position : aliveCells.keySet()){
+			double[] cord = parseCellKey(position);
 			for(int x = -1; x <= 1; ++x) {
 				for(int y = -1; y <= 1; ++y) {
 					if(x != 0 || y != 0) {
@@ -57,10 +73,10 @@ public class GameOfLife {
 		}
 		HashSet<String> updateAliveSet = new HashSet<String>();
 		for(String position : checkSet){
-			if(aliveMap.get(position) != null && (liveNeighbors(position) < 2 || liveNeighbors(position) > 3)) {
+			if(aliveCells.get(position) != null && (liveNeighbors(position) < 2 || liveNeighbors(position) > 3)) {
 				updateAliveSet.add(position);
 			}
-			else if(aliveMap.get(position) == null && liveNeighbors(position) == 3) {
+			else if(aliveCells.get(position) == null && liveNeighbors(position) == 3) {
 				updateAliveSet.add(position);
 			}
 		}
@@ -69,21 +85,21 @@ public class GameOfLife {
 		}
 		else {
 			for(String position : updateAliveSet) {
-				aliveMap.put(position, aliveMap.get(position) == null ? true : null);
+				aliveCells.put(position, aliveCells.get(position) == null ? true : null);
 			}
-			++iteration;
+			++iterationNum;
 			return true;
 		}
 
 	}
 
-	public static int liveNeighbors(String position) {
-		double[] cord = parseKey(position);
+	public int liveNeighbors(String position) {
+		double[] cord = parseCellKey(position);
 		int liveNeighbors = 0;
 		for(int x = -1; x <= 1; ++x) {
 			for(int y = -1; y <= 1; ++y) {
 				if(x != 0 || y != 0) {
-					if(aliveMap.get((cord[0] + x) +","+ (cord[1] + y)) != null) {
+					if(aliveCells.get((cord[0] + x) +","+ (cord[1] + y)) != null) {
 						++liveNeighbors;
 					}
 				}
@@ -92,33 +108,32 @@ public class GameOfLife {
 		return liveNeighbors;
 	}
 
-	public static void updateView() {
+	public void updateView() {
 		if(StdDraw.isKeyPressed(KeyEvent.VK_R)) {
 			resetView();
-			return;
 		}
 
 		if(StdDraw.isKeyPressed(KeyEvent.VK_Q) && xScale > 1 && yScale > 1){ // zoom in
-			xScale -= xScale*SCALE_SENSITIVITY;
-			yScale -= yScale*SCALE_SENSITIVITY;
+			xScale /= SCALE_SENSITIVITY;
+			yScale /= SCALE_SENSITIVITY;
 		}
 		else if(StdDraw.isKeyPressed(KeyEvent.VK_E)){ // zoom out
-			xScale += xScale*SCALE_SENSITIVITY;
-			yScale += yScale*SCALE_SENSITIVITY;
+			xScale *= SCALE_SENSITIVITY;
+			yScale *= SCALE_SENSITIVITY;
 		}
 
 		if(StdDraw.isKeyPressed(KeyEvent.VK_DOWN) && yScale > 1){ // zoom y in
-			yScale -= yScale*SCALE_SENSITIVITY;
+			yScale /= SCALE_SENSITIVITY;
 		}
 		else if(StdDraw.isKeyPressed(KeyEvent.VK_UP)){ // zoom y out
-			yScale += yScale*SCALE_SENSITIVITY;;
+			yScale *= SCALE_SENSITIVITY;
 		}
 
 		if(StdDraw.isKeyPressed(KeyEvent.VK_LEFT) && xScale > 1){ // zoom x in
-			xScale -= xScale*SCALE_SENSITIVITY;;
+			xScale /= SCALE_SENSITIVITY;
 		}
 		else if(StdDraw.isKeyPressed(KeyEvent.VK_RIGHT)){ // zoom x out
-			xScale += xScale*SCALE_SENSITIVITY;;
+			xScale *= SCALE_SENSITIVITY;
 		}
 
 		if(StdDraw.isKeyPressed(KeyEvent.VK_W)){ // shift up
@@ -139,23 +154,23 @@ public class GameOfLife {
 		StdDraw.setYscale(boardCenter[1] - yScale, boardCenter[1] + yScale);
 	}
 
-	public static void drawBoard() {
-		StdDraw.setPenColor(0, 0, 0);
+	public void drawBoard() {
+		StdDraw.setPenColor(backgroundColor);
 		StdDraw.filledSquare(boardCenter[0], boardCenter[1], Math.max(xScale, yScale));
 		for(double i = (int)(boardCenter[0] - xScale)-0.5; i <= boardCenter[0] + xScale+0.5; ++i) {
 			for(double j = (int)(boardCenter[1] - yScale)-0.5; j <= boardCenter[1] + yScale+0.5; ++j) {
-				if(aliveMap.get(i +","+ j) != null) {
-					StdDraw.setPenColor(0, 255, 0);
+				if(aliveCells.get(i +","+ j) != null) {
+					StdDraw.setPenColor(aliveCellColor);
 				}
 				else {
-					StdDraw.setPenColor(0, 0, 175);
+					StdDraw.setPenColor(deadCellColor);
 				}
 				StdDraw.filledSquare(i, j, CELL_RADIUS);
 			}
 		}
 	}
 
-	public static void drawBoardInfo(int state) {
+	/*public void drawBoardInfo(int state) {
 		StdDraw.setPenColor(Color.WHITE);
 		switch (state) {
 			case 0: // cell setup
@@ -177,74 +192,168 @@ public class GameOfLife {
 				StdDraw.text(boardCenter[0], boardCenter[1] - 0.1*yScale, "Click to reset cells");
 				break;
 		}
-	}
-
-	public static void gameOfLife() {
-		StdDraw.enableDoubleBuffering();
-		while(true){
-			aliveMap.clear();
-			iteration = 0;
-			resetView();
-			drawBoard();
-			drawBoardInfo(0);
-			StdDraw.show();
-			boolean mouseDown = false;
-
-			// Initial cell setup
-			while(true) {
-				StdDraw.clear();
-				if(StdDraw.isKeyPressed(SPACEBAR_CODE)) {
-					break;
-				}
-				if(!StdDraw.isMousePressed()) {mouseDown = false;}
-				if(StdDraw.isMousePressed() && !mouseDown) {
-					mouseDown = true;
-					int flooredX = StdDraw.mouseX() < 0 ? (int)(StdDraw.mouseX() - 1) : (int)(StdDraw.mouseX());
-					int flooredY = StdDraw.mouseY() < 0 ? (int)(StdDraw.mouseY() - 1) : (int)(StdDraw.mouseY());
-					aliveMap.put((flooredX+.5) +","+ (flooredY+.5), aliveMap.get((flooredX+.5) +","+ (flooredY+.5)) == null ? true : null);
-				}
-				updateView();
-				drawBoard();
-				drawBoardInfo(0);
-				StdDraw.show(50);
+	}*/
+	
+	public void addUserConfig(LinkedList<String> getUserConfig){
+		/*
+		left justify rows
+		* 001
+		* 101
+		* 1110
+		*/
+		if(getUserConfig.isEmpty()){
+			return;
+		}
+		int height = getUserConfig.size();
+		int length = getUserConfig.get(0).length();
+		for(String row : getUserConfig){
+			if(row.length() > length){
+				length = row.length();
 			}
-			boolean gameQuit = false;
-			while(updateCells()) {
-				StdDraw.clear();
-				if(StdDraw.isMousePressed()) {
-					gameQuit = true;
-					break;
+		}
+		int x = -(length/2);
+		int y = -(height/2);
+		for(String row : getUserConfig){
+			for(char val : row.toCharArray()){
+				if(val=='1'){
+					aliveCells.put((x+0.5)+","+(y+0.5), true);
 				}
-				while(StdDraw.isKeyPressed(SPACEBAR_CODE)){
-					StdDraw.clear();
-					updateView();
-					drawBoard();
-					drawBoardInfo(2);
-					StdDraw.show(100);
-				}
-				updateView();
-				drawBoard();
-				drawBoardInfo(1);
-				StdDraw.show(100);
+				++x;
 			}
-
-			// Game halted
-			if(!gameQuit){
-				while(!StdDraw.isMousePressed()) {
-					StdDraw.clear();
-					updateView();
-					drawBoard();
-					drawBoardInfo(3);
-					StdDraw.show(50);
-				}
-			}
-			while(StdDraw.isMousePressed()) {}
+			--y;
+			x = -(length/2);
 		}
 	}
 
 
-	public static void main(String[] args) {
-		gameOfLife();
+	public void flipCells(){
+		int flooredX = StdDraw.mouseX() < 0 ? (int)(StdDraw.mouseX() - 1) : (int)(StdDraw.mouseX());
+		int flooredY = StdDraw.mouseY() < 0 ? (int)(StdDraw.mouseY() - 1) : (int)(StdDraw.mouseY());
+		aliveCells.put((flooredX+.5) +","+ (flooredY+.5), aliveCells.get((flooredX+.5) +","+ (flooredY+.5)) == null ? true : null);
 		
 	}
+
+	public boolean getUserConfig(){
+		while(true){
+            String rowConfig = scanner.nextLine();
+            if(rowConfig.toLowerCase().contains("done")){
+                addUserConfig(userConfiguration);
+				userConfiguration.clear();
+				return true;
+            }
+            if(StringUtils.containsOnly(rowConfig, "01")){
+                userConfiguration.add(rowConfig);
+            }
+            else{
+                System.out.println("Line not recognized: invalid character(s)");
+            }
+            // assert row only contains "1" and "0" or "x" and "o"
+            // if row is "done" end
+        }
+	}
+
+	public boolean spacebarPressed(){
+		if(!StdDraw.isKeyPressed(SPACEBAR_CODE) && spacebarDown){
+			spacebarDown = false;
+		}
+		else if(StdDraw.isKeyPressed(SPACEBAR_CODE) && !spacebarDown){
+			spacebarDown = true;
+			return true;
+		}
+		return false;
+	}
+
+	public boolean mousePressed(){
+		if(StdDraw.isMousePressed() && !mouseDown){
+			mouseDown = true;
+			return true;
+		}
+		else if(!StdDraw.isMousePressed() && mouseDown){
+			mouseDown = false;
+		}
+		return false;
+	}
+
+
+	public void gameRunning(){
+		while(updateCells()){
+			StdDraw.clear();
+			updateView();
+			drawBoard();
+			if(spacebarPressed()){
+				gamePaused();
+			};
+			if(mousePressed()) {
+				resetView();
+				aliveCells.clear();
+				gamePaused();
+			}
+			StdDraw.show(100);
+		}
+		gameHalted();
+	}
+	
+	public void gameHalted(){
+		while(true) {
+			StdDraw.clear();
+			updateView();
+			if(mousePressed()) {
+				flipCells();
+				break;
+			}
+			if(StdDraw.isKeyPressed(KeyEvent.VK_I)) {
+				getUserConfig();
+				break;
+			}
+			
+			drawBoard();
+
+			//drawBoardInfo(3);
+			StdDraw.show(50);
+		}
+		gamePaused();
+	}
+
+	public void gamePaused(){
+		while(true){
+			StdDraw.clear();
+			
+			updateView();
+			if(mousePressed()) {
+				flipCells();
+			}
+			if(StdDraw.isKeyPressed(KeyEvent.VK_I)) {
+				System.out.println("Type the initial configuration row by row.  Type 'done' when finished	");
+				getUserConfig();
+			}
+			if(StdDraw.isKeyPressed(KeyEvent.VK_I)){
+				System.out.println("u should type something");
+				String rowConfig = scanner.nextLine();
+				System.out.println("u typed: " + rowConfig);
+			}
+			
+			drawBoard();
+			
+			if(spacebarPressed()){
+				break;
+			};
+			StdDraw.show(100);
+		}
+		gameRunning();
+		
+
+	}
+
+	public void gameOfLife() {
+		gamePaused();
+		
+
+	}
+
+	public static void main(String[] args) {
+		GameOfLife Game = new GameOfLife();
+		Game.gameOfLife();
+	}
 }
+
+
