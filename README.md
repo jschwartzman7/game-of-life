@@ -7,7 +7,7 @@ Click a grid cell to flip its current state
 Click anywhere on screen to reset the grid when game is running
 Press space to toggle gamestate when possible
 Press "i" to enter configuration mode from console, follow on-screen instructions
-Additional interesting configurations and their behaviors taken from Wikipedia:
+Additional interesting configurations and their behaviors taken from Wikipedia, Game Of Life Wiki Catalogue:
 
     Static patterns
         XX
@@ -40,3 +40,9 @@ Additional interesting configurations and their behaviors taken from Wikipedia:
         XX
           XX
           XX
+
+cd game-of-life
+
+chmod +x build.sh
+
+./build.sh

@@ -3,15 +3,19 @@ import java.awt.Event;
 import java.awt.Font;
 import java.awt.RenderingHints.Key;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Scanner;
-
+import java.util.Set;
+import java.util.Iterator;
 import org.apache.commons.lang3.StringUtils;
 
 import edu.princeton.cs.introcs.StdDraw;
-
+import java.util.Timer;
 public class GameOfLife {
 
  	static final int SPACEBAR_CODE = 32;
@@ -20,45 +24,47 @@ public class GameOfLife {
 	final double MOVE_SENSITIVITY;
 	final double CELL_RADIUS;
 	final Color BACKGROUND_COLOR;
-	final Color ALIVE_CELL_COLOR;;
+	final Color ALIVE_CELL_COLOR;
 	final Color EMPY_CELL_COLOR;
 	final Color TEXT_COLOR;
+	final int FRAMERATE_MS;
+	final int DEFAULT_GAME_DELAY_FACTOR;
 	private double xScaleRadius;
 	private double yScaleRadius;
 	private double[] boardCenter;
-	private int framerateMs;
-	private HashSet<String> aliveCells; 
-	private HashSet<String> cellsToLife;
-	private HashSet<String> cellsToDeath;
+	private int gameDelayFactor;
+	private HashSet<String> aliveCells;
 	private int iterationNum;
 	private BoardConfiguration BoardConfig;
 
 	// Game state variables
 	private boolean pressingMouse;
 	private boolean pressingSpace;
+	private boolean pushinP;
 	private boolean gameHalted;
 	private boolean gameRunning;
 
 	public GameOfLife() {
 		DEFAULT_SCALE = 7;
-		SCALE_SENSITIVITY = 1.1;
-		MOVE_SENSITIVITY = .1;
+		SCALE_SENSITIVITY = 1.02;
+		MOVE_SENSITIVITY = .03;
 		CELL_RADIUS = 0.49;
 		BACKGROUND_COLOR = new Color(0, 0, 0);
 		ALIVE_CELL_COLOR = new Color(0, 255, 0);
 		EMPY_CELL_COLOR = new Color(0, 0, 175);
 		TEXT_COLOR = new Color(255, 255, 255);
+		FRAMERATE_MS = 10;
+		DEFAULT_GAME_DELAY_FACTOR = 4;
 		xScaleRadius = DEFAULT_SCALE;
 		yScaleRadius = DEFAULT_SCALE;
 		boardCenter = new double[]{0,0};
-		framerateMs = 50;
+		gameDelayFactor = DEFAULT_GAME_DELAY_FACTOR;
 		aliveCells = new HashSet<String>(); // i + "" + j
-		cellsToLife = new HashSet<String>();
-		cellsToDeath = new HashSet<String>();
 		iterationNum = 0;
 		BoardConfig = new BoardConfiguration();
-		pressingMouse = StdDraw.isMousePressed();
-		pressingSpace = StdDraw.isKeyPressed(SPACEBAR_CODE);
+		pressingMouse = false;
+		pressingSpace = false;
+		pushinP = false;
 		gameHalted = false;
 		gameRunning = false;
 		StdDraw.enableDoubleBuffering();
@@ -78,10 +84,19 @@ public class GameOfLife {
 		}
 		StringBuilder currentBoardHash = new StringBuilder();
 		for(String cell : aliveCells){
-			currentBoardHash.append(cell);
-			currentBoardHash.append(":");
+			currentBoardHash.append(cell+":");
 		}
-		return currentBoardHash.toString().substring(0, currentBoardHash.length()-1);
+		return currentBoardHash.toString();
+	}
+
+	public void setAliveUserConfig(String userConfig){
+		/*
+		* "0,0:0,1:0,2:1,1:-1,2"
+		*/
+		for(String cord : userConfig.split(":")){
+			int[] xy = parseCellKey(cord);
+			aliveCells.add(xy[0]+","+xy[1]);
+		}
 	}
 
 	public boolean updateCells() {
@@ -99,9 +114,10 @@ public class GameOfLife {
 		 */
 
 		
-
 		 // check all cells that are alive and their neighbors
 
+		HashSet<String> cellsToLife = new HashSet<String>();
+		HashSet<String> cellsToDeath = new HashSet<String>();
 		HashSet<String> checkSet = new HashSet<String>();
 		
 		for(String position : aliveCells){
@@ -114,7 +130,8 @@ public class GameOfLife {
 		}
 
 		for(String position : checkSet){
-			int numLiveNeighbors = liveNeighbors(position);
+			int[] cord = parseCellKey(position);
+			int numLiveNeighbors = liveNeighbors(cord);
 			if(aliveCells.contains(position) && (numLiveNeighbors < 2 || numLiveNeighbors > 3)) {
 				cellsToDeath.add(position);
 			}
@@ -139,8 +156,60 @@ public class GameOfLife {
 
 	}
 
-	public int liveNeighbors(String position) {
-		int[] cord = parseCellKey(position);
+	public HashSet<String> getUnexploredNeighbors(int[] cellCord, HashSet<String> exploredCells){
+		int x = cellCord[0];
+		int y = cellCord[1];
+		HashSet<String> potentialNeighbors = new HashSet<String>();
+		for(String cell : new String[]{(x-1)+","+(y-1), x+","+(y-1), (x+1)+","+(y-1), (x-1)+","+y, x+","+y, (x+1)+","+y, (x-1)+","+(y+1), x+","+(y+1), (x+1)+","+(y+1)}){
+			if(!exploredCells.contains(cell)){
+				potentialNeighbors.add(cell);
+			}
+		};
+		return potentialNeighbors;
+	}
+
+	public boolean updateCellsV2(){
+		// bfs search for all cells that need to be checked
+		HashSet<String> updatedCells = new HashSet<String>();
+		HashSet<String> cellsToLife = new HashSet<String>();
+		HashSet<String> cellsToDeath = new HashSet<String>();
+		for(String curCell : aliveCells){
+			HashSet<String> uncheckedNeighbors = getUnexploredNeighbors(parseCellKey(curCell), updatedCells);
+			if(uncheckedNeighbors.isEmpty()) {
+				continue;
+			}
+			for(String neighbor : uncheckedNeighbors){
+				updatedCells.add(neighbor);
+				int numLiveNeighbors = liveNeighbors(parseCellKey(neighbor));
+				if(aliveCells.contains(neighbor)){
+					if(numLiveNeighbors < 2 || numLiveNeighbors > 3) {
+						cellsToDeath.add(neighbor);
+					}
+				}
+				else if(numLiveNeighbors == 3) {
+					cellsToLife.add(neighbor);
+				}
+			}
+		}
+
+		if(cellsToLife.isEmpty() && cellsToDeath.isEmpty()) {
+			return false;
+		}
+		else {
+			for(String position : cellsToLife) {
+				aliveCells.add(position);
+			}
+			for(String position : cellsToDeath) {
+				aliveCells.remove(position);
+			}
+			cellsToLife.clear();
+			cellsToDeath.clear();
+			++iterationNum;
+			return true;
+		}
+	}
+
+	public int liveNeighbors(int[] cord) {
 		int liveNeighbors = 0;
 		for(int x = -1; x <= 1; ++x) {
 			for(int y = -1; y <= 1; ++y) {
@@ -160,6 +229,7 @@ public class GameOfLife {
 			boardCenter[1] = 0;
 			xScaleRadius = DEFAULT_SCALE;
 			yScaleRadius = DEFAULT_SCALE;
+			aliveCells.clear();
 		}
 
 		if(StdDraw.isKeyPressed(KeyEvent.VK_Q) && xScaleRadius > 1 && yScaleRadius > 1){ // zoom in
@@ -219,19 +289,8 @@ public class GameOfLife {
 	}
 
 
-	public void setAliveUserConfig(String userConfig){
-		/*
-		* "0,0:0,1:0,2:1,1:-1,2"
-		*/
-		for(String cord : userConfig.split(":")){
-			String[] xy = cord.split(",");
-			int x = Integer.parseInt(xy[0]);
-			int y = Integer.parseInt(xy[1]);
-			aliveCells.add(x+","+y);
-		}
-	}
 	
-	public void flipCells(){
+	public void flipCell(){
 		int flooredX = (int)Math.round(StdDraw.mouseX());
 		int flooredY = (int)Math.round(StdDraw.mouseY());
 		/*int flooredX = StdDraw.mouseX() < 0 ? (int)(StdDraw.mouseX() - 1) : (int)(StdDraw.mouseX());
@@ -244,6 +303,17 @@ public class GameOfLife {
 			aliveCells.add(cellKey);
 		}
 		
+	}
+
+	public boolean pPushed(){
+		if(!StdDraw.isKeyPressed(KeyEvent.VK_P) && pushinP){
+			pushinP = false;
+		}
+		else if(StdDraw.isKeyPressed(KeyEvent.VK_P) && !pushinP){
+			pushinP = true;
+			return true;
+		}
+		return false;
 	}
 
 	public boolean spacebarPressed(){
@@ -269,7 +339,9 @@ public class GameOfLife {
 	}
 
 	public void gameState(){
+		int ticks = 0;
 		while(true){
+			++ticks;
 			StdDraw.clear();
 			updateView();
 			drawBoard();
@@ -278,24 +350,36 @@ public class GameOfLife {
 			};
 			if(gameRunning){
 				StdDraw.setPenColor(TEXT_COLOR);
-				gameRunning = updateCells();
+
+				//long t = System.nanoTime();
+				if(ticks % gameDelayFactor == 0){
+					//long t = System.nanoTime();
+					gameRunning = updateCellsV2();
+					//System.out.println((System.nanoTime() - t));
+				}
+				//System.out.println((System.nanoTime() - t));
 				if(!gameRunning){gameHalted = true;}
-				StdDraw.textLeft(boardCenter[0]-.9*xScaleRadius, boardCenter[1]-.85*yScaleRadius, "Game Alive");
+				StdDraw.textLeft(boardCenter[0]-.95*xScaleRadius, boardCenter[1]-.75*yScaleRadius, "Game Alive");
+				StdDraw.textLeft(boardCenter[0]-.95*xScaleRadius, boardCenter[1]-.65*yScaleRadius, "Speed: " + ((int)(100*DEFAULT_GAME_DELAY_FACTOR/gameDelayFactor))/100.0 + "x");
 				if(mousePressed()) {
 					aliveCells.clear();
 					gameRunning = false;
 				}
+				if(pPushed()) {
+					if(gameDelayFactor <= 1){
+						gameDelayFactor = DEFAULT_GAME_DELAY_FACTOR * 4;
+					}
+					else{
+						gameDelayFactor /= 2;
+					}
+				}
 			}
 			else{
 				StdDraw.setPenColor(TEXT_COLOR);
-				if(gameHalted){
-					StdDraw.textLeft(boardCenter[0]-.9*xScaleRadius, boardCenter[1]-.85*yScaleRadius, "Game Halted");
-				}
-				else{
-					StdDraw.textLeft(boardCenter[0]-.9*xScaleRadius, boardCenter[1]-.85*yScaleRadius, "Game Paused");
-				}
+				if(gameHalted){StdDraw.textLeft(boardCenter[0]-.95*xScaleRadius, boardCenter[1]-.75*yScaleRadius, "Game Halted");}
+				else{StdDraw.textLeft(boardCenter[0]-.95*xScaleRadius, boardCenter[1]-.75*yScaleRadius, "Game Paused");}
 				if(mousePressed()) {
-					flipCells();
+					flipCell();
 					if(gameHalted){gameHalted = false;}
 					iterationNum = 0;
 				}
@@ -310,11 +394,10 @@ public class GameOfLife {
 				}
 			}
 			if(iterationNum > 0){
-				StdDraw.textLeft(boardCenter[0]-.9*xScaleRadius, boardCenter[1]-.95*yScaleRadius, "Iteration: " + iterationNum);
+				StdDraw.textLeft(boardCenter[0]-.95*xScaleRadius, boardCenter[1]-.955*yScaleRadius, "Iteration: " + iterationNum);
 			}
-			StdDraw.textLeft(boardCenter[0]-.9*xScaleRadius, boardCenter[1]-.9*yScaleRadius, "Alive Cells: " + aliveCells.size());
-			
-			StdDraw.pause(framerateMs);
+			StdDraw.textLeft(boardCenter[0]-.95*xScaleRadius, boardCenter[1]-.85*yScaleRadius, "Alive Cells: " + aliveCells.size());
+			StdDraw.pause(FRAMERATE_MS);
 			StdDraw.show();
 		}
 	}
@@ -325,6 +408,14 @@ public class GameOfLife {
 
 	public static void main(String[] args) {
 		new GameOfLife();
+		/*String agarHash = BoardConfiguration.ba2;
+		GameOfLife game = new GameOfLife();
+		game.setAliveUserConfig(agarHash);
+		for(int i = 0; i < 1000; ++i){
+			long t = System.nanoTime();
+			game.updateCells();
+			System.out.println((System.nanoTime() - t));
+		}*/
 	}
 }
 
