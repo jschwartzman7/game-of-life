@@ -4,9 +4,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Scanner;
-import org.apache.commons.lang3.StringUtils;
-
-import edu.princeton.cs.introcs.StdDraw;
 
 
 
@@ -135,6 +132,7 @@ public class BoardConfiguration{
                         File ImportedPatterns = new File("ImportedPatterns");
                         for(File file : ImportedPatterns.listFiles()){
                             if(row.equals(file.getName().replace(".txt","").toLowerCase())){
+                                System.out.println("Loading " + file.getName());
                                 try {
                                     Scanner fileScanner = new Scanner(file);
                                     return convertInputConfigToHash(fileScannerToString(fileScanner));
@@ -155,8 +153,7 @@ public class BoardConfiguration{
 
     public static void main(String[] args) {
         //GameOfLife game = new GameOfLife();
-        String s = "";
-        System.out.println(s.split(":")[1]);
+        
         
     }
 }

@@ -1,9 +1,7 @@
 import java.awt.Color;
 import java.awt.Event;
 import java.awt.Font;
-import java.awt.RenderingHints.Key;
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,8 +10,6 @@ import java.util.Queue;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.Iterator;
-import org.apache.commons.lang3.StringUtils;
-
 import edu.princeton.cs.introcs.StdDraw;
 import java.util.Timer;
 public class GameOfLife {
