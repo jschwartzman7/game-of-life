@@ -2,16 +2,16 @@
 
 Conway's Game of Life application.  Rendered using Java StdDraw api. ImportedPatterns contains parsed board patterns from LifeWiki that can be displayed.
 
-To run the app:
+# To run the app:
 
 # game-of-life is the current directory
-cd game-of-life
+# % cd game-of-life
 
 # ensure you have access permissions
-chmod +x run.sh
+# % chmod +x run.sh
 
 # start the program
-./run.sh
+# % ./run.sh
 
 Navigating Game of Life:
 
@@ -32,18 +32,22 @@ Simple Patterns
         XX
         XX
 
+
         XX
        X  X
         XX
+
 
         XX
        X  X
         X X
          X
 
+
        XX
        X X
         X
+
 
         X
        X X
@@ -53,8 +57,10 @@ Simple Patterns
 
         XXX 
 
+
         XXX
          XXX
+
 
         XX
         XX
