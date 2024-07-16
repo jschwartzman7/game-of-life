@@ -29,7 +29,8 @@ Press [C] to "Factory Reset" board state
 Press [P] to adjust life running speed
 
 Simple Patterns
-  Static patterns
+
+Static patterns
 
         XX
         XX
@@ -55,7 +56,7 @@ Simple Patterns
        X X
         X
 
-  Oscillators
+Oscillators
 
         XXX 
 
