@@ -1,15 +1,34 @@
 # game-of-life
 
-Conway's Game of Life using Java StdDraw api
+Conway's Game of Life application.  Rendered using Java StdDraw api. ImportedPatterns contains parsed board patterns from LifeWiki that can be displayed.
 
-Run GameOfLife file to start the program
-Click a grid cell to flip its current state
-Click anywhere on screen to reset the grid when game is running
-Press space to toggle gamestate when possible
-Press "i" to enter configuration mode from console, follow on-screen instructions
-Additional interesting configurations and their behaviors taken from Wikipedia, Game Of Life Wiki Catalogue:
+To run the app:
 
-    Static patterns
+# game-of-life is the current directory
+cd game-of-life
+
+# ensure you have access permissions
+chmod +x run.sh
+
+# start the program
+./run.sh
+
+Navigating Game of Life:
+
+Click any cell to flip its current state
+Press space to start / pause life
+Use [WASD] to move the view window and [QE] to zoom in/out
+
+Press [I] to enter configuration mode in console
+Press [R] (and mouse while life running) to reset board to default
+Press [T] to set current board state as default
+Press [C] to "Factory Reset" board state
+
+Press [P] to adjust life running speed
+
+Simple Patterns
+  Static patterns
+
         XX
         XX
 
@@ -30,7 +49,8 @@ Additional interesting configurations and their behaviors taken from Wikipedia, 
        X X
         X
 
-    Oscillators
+  Oscillators
+
         XXX 
 
         XXX
@@ -41,8 +61,3 @@ Additional interesting configurations and their behaviors taken from Wikipedia, 
           XX
           XX
 
-cd game-of-life
-
-chmod +x build.sh
-
-./build.sh
